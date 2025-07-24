@@ -1,5 +1,6 @@
 import json
-from speak import VTT, voice
+from speak import voice
+from threading import Thread
 
 
 def load_commands(command_path:str = './order.json'):
@@ -8,10 +9,9 @@ def load_commands(command_path:str = './order.json'):
         commands.update(json.load(f))
     return commands
 
+
 def main():
-    speaker, rec = voice()
-    VTT(rec, load_commands(),speaker)
-    return
+    voice(load_commands())
 
 
 if __name__ == '__main__':

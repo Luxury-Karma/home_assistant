@@ -4,6 +4,7 @@ import sounddevice as mic
 import espeakng
 import os
 import json
+from brain import *
 
 
 os.environ["PATH"] = r"C:\Program Files\eSpeak NG;" + os.environ["PATH"]
@@ -20,6 +21,7 @@ q: queue = queue.Queue()  # Due to how this model work it seem to be needed. Wou
 
 def callback(indata, frames, time, status):
     q.put(bytes(indata))
+
 
 
 def processing_command(command_receive: str, preloaded_commands: dict, speaker: espeakng.Speaker):
@@ -48,7 +50,8 @@ def VTT(rec: KaldiRecognizer, preloded_command: dict, speaker: espeakng.Speaker)
                 print(f'Result: {res.get("text")}')
                 processing_command(res.get('text'), preloded_command, speaker)
             else:
-                print(f'Partial: {rec.PartialResult()}')
+                continue
+                #print(f'Partial: {rec.PartialResult()}')
 
 
 # For now I only setup 2 language I will use a bool for simplicity. Will probably change to an enum if I decide to
@@ -71,5 +74,6 @@ def init_voice() -> espeakng.Speaker:
     return mySpeaker
 
 
-def voice() -> espeakng.Speaker and KaldiRecognizer:
-    return init_voice(), init_VTT_model()
+def voice(list_of_commands:dict) -> espeakng.Speaker and KaldiRecognizer:
+    #VTT(init_VTT_model(), list_of_commands, init_voice())
+    processing_command('Initialise security', list_of_commands, init_voice())

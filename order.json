@@ -1,7 +1,15 @@
 {
-"Who are you": {
-  "answer": "No one my lord. I am here to serve",
-  "action": "none"
-}
+  "Who are you": {
+    "answer": "No one my lord. I am here to serve",
+    "action": "none"
+  },
+  "Initialise security": {
+    "answer": "Security initialised",
+    "action": "video_surveillance"
+  },
+  "Stop security": {
+    "answer": "Stopping Security Surveillance",
+    "action": "stop_video_surveillance"
+  }
 
 }

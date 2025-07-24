@@ -2,7 +2,7 @@ This is my script for my home assistant model.
 
 The goal of this is to make a off line home assistant running out of a rasberrypy.
 This should have a amount of preset sentences to do action that will be added to the script.
-One of the action (optional) will be to connect it to a local (or internet if you want) LLM to have interaction with it. 
+One of the action (optional) will be to connect it to a local (or internet if you want) LLM to have interaction with it.
 
 
 The voice is generated using espeakng
