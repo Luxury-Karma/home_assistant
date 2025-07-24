@@ -1,6 +1,8 @@
 import cv2
 from ultralytics import YOLO
 from statistics import mode
+from queue import Queue, Empty
+
 
 """
 @software{yolo11_ultralytics,
@@ -19,7 +21,7 @@ def __initialise_eyes(webcam_int: int = 0, model_path: str = '.\\eyes_model\\yol
     return cv2.VideoCapture(webcam_int), YOLO(model_path)
 
 
-def __scan_for_people(model: YOLO, webcam: cv2, testing_mode: bool = False, frames_to_consider: int = 6, minimal_confidence: float = 0.7):
+def __scan_for_people(model: YOLO, webcam: cv2, queue: Queue, testing_mode: bool = False, frames_to_consider: int = 6, minimal_confidence: float = 0.7):
     capture: bool = True
     last_frames_amount: list[int] = []
     people_in_camera:int = 0  # will be passed to know the amount of people the skull see and if he speak to one or multiple people
@@ -36,7 +38,7 @@ def __scan_for_people(model: YOLO, webcam: cv2, testing_mode: bool = False, fram
         if len(last_frames_amount) >= frames_to_consider:
             last_frames_amount.pop(0)
             m = mode(last_frames_amount)
-            people_in_camera = m
+            queue.put(m)
 
 
         if testing_mode:
@@ -53,10 +55,9 @@ def __testing_visual_webcam(amount_of_person: list, frame):
     cv2.waitKey(1)
 
 
-def activate_eyes(testing_mode:bool = False):
+def activate_eyes(queue: Queue, testing_mode: bool = False):
+    print(f'is in testing mode : {testing_mode}')
     webcam, model = __initialise_eyes()
-    __scan_for_people(model, webcam, testing_mode)
+    __scan_for_people(model, webcam,queue ,testing_mode)
 
 
-if __name__ == "__main__":
-    activate_eyes()
