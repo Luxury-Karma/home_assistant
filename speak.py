@@ -4,7 +4,6 @@ import sounddevice as mic
 import espeakng
 import os
 import json
-from brain import *
 from queue import Queue, Empty
 
 
@@ -32,7 +31,7 @@ def VTT(rec: KaldiRecognizer, answer_queue: Queue, command_queue: Queue, speaker
         while listen:
             # Could make this its own thread to be able to listen while the assistant speak. But for now let's keep this simple
             try:
-                order: str = answer_queue.get(block=True, timeout=0.1)
+                order: str = answer_queue.get(block=False, timeout=0.1)
                 speak(speaker, order)
             except Empty:
                 pass
@@ -67,5 +66,5 @@ def init_voice() -> espeakng.Speaker:
     return mySpeaker
 
 
-def voice(list_of_commands:dict, queue:Queue, answer_queue:Queue) -> espeakng.Speaker and KaldiRecognizer:
+def voice(queue:Queue, answer_queue:Queue) -> espeakng.Speaker and KaldiRecognizer:
     VTT(init_VTT_model(), answer_queue=answer_queue, command_queue=queue, speaker=init_voice())

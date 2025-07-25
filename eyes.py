@@ -2,7 +2,8 @@ import cv2
 from ultralytics import YOLO
 from statistics import mode
 from queue import Queue, Empty
-
+import datetime
+import os
 
 """
 @software{yolo11_ultralytics,
@@ -16,16 +17,29 @@ from queue import Queue, Empty
 }
 """
 
+is_recording: bool = False
+
 
 def __initialise_eyes(webcam_int: int = 0, model_path: str = '.\\eyes_model\\yolo11n.pt') -> cv2.VideoCapture and YOLO:
     return cv2.VideoCapture(webcam_int), YOLO(model_path)
 
 
-def __scan_for_people(model: YOLO, webcam: cv2, queue: Queue, testing_mode: bool = False, frames_to_consider: int = 6, minimal_confidence: float = 0.7):
+def __make_save_file_name() -> str:
+    date = str(datetime.datetime.now())
+    date = date.replace(' ', '_')
+    date = date.replace(':', '.')
+    return date
+
+
+def __scan_for_people(model: YOLO, webcam: cv2, queue: Queue, video_queue_order, testing_mode: bool = False, frames_to_consider: int = 6, minimal_confidence: float = 0.7):
+    global is_recording
     capture: bool = True
     last_frames_amount: list[int] = []
-    people_in_camera:int = 0  # will be passed to know the amount of people the skull see and if he speak to one or multiple people
+    people_in_camera: int = 0  # will be passed to know the amount of people the skull see and if he speak to one or multiple people
     # could also be use in the security mode to tell how many people he saw plus sending picture/video
+    video_writer: cv2.VideoWriter = None
+
+
     while capture:
         ret, frame = webcam.read()
         if not ret:
@@ -37,9 +51,45 @@ def __scan_for_people(model: YOLO, webcam: cv2, queue: Queue, testing_mode: bool
 
         if len(last_frames_amount) >= frames_to_consider:
             last_frames_amount.pop(0)
-            m = mode(last_frames_amount)
-            queue.put(m)
+            queue.put(mode(last_frames_amount))
 
+        try:
+            recording: bool = video_queue_order.get(block=True, timeout=0.01)
+            if not recording and is_recording and video_writer and recording != None:
+                print(f'reccording : {recording} \n is_recording {is_recording} \n video_writer : {video_writer} \n reccording : {recording}')
+                video_writer.release()
+                video_writer = None
+                print('Stopped video')
+
+            is_recording = recording
+            video_queue_order.empty()
+
+        except Empty:
+            pass
+
+        if is_recording:
+            if video_writer is None:
+                width = int(webcam.get(cv2.CAP_PROP_FRAME_WIDTH))
+                height = int(webcam.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                fps = webcam.get(cv2.CAP_PROP_FPS)
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                file_name: str = __make_save_file_name()
+                video_writer = cv2.VideoWriter(f".\\security_camera_video\\{file_name}.mp4", fourcc, fps, (width, height))
+                print(f"Started recording to {file_name}.mp4")
+
+            for r in amount_of_person:
+                x1, y1, x2, y2 = map(int, r.xyxy[0])
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+            cv2.putText(frame,f"People: {len(amount_of_person)}",(10, 30),cv2.FONT_HERSHEY_SIMPLEX,1,
+                (0, 255, 0),2)
+
+            # Add timestamp at bottom-left
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            cv2.putText(frame,timestamp,(10, frame.shape[0] - 10),cv2.FONT_HERSHEY_SIMPLEX,0.6,(0, 255, 0),
+            2,cv2.LINE_AA)
+
+            video_writer.write(frame)
 
         if testing_mode:
             __testing_visual_webcam(amount_of_person, frame)
@@ -55,9 +105,9 @@ def __testing_visual_webcam(amount_of_person: list, frame):
     cv2.waitKey(1)
 
 
-def activate_eyes(queue: Queue, testing_mode: bool = False):
+def activate_eyes(queue: Queue, video_queue_order: Queue, testing_mode: bool = False):
     print(f'is in testing mode : {testing_mode}')
     webcam, model = __initialise_eyes()
-    __scan_for_people(model, webcam,queue ,testing_mode)
+    __scan_for_people(model, webcam, queue, video_queue_order, testing_mode)
 
 
