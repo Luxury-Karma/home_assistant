@@ -3,7 +3,6 @@ from ultralytics import YOLO
 from statistics import mode
 from queue import Queue, Empty
 import datetime
-import os
 
 """
 @software{yolo11_ultralytics,
@@ -31,6 +30,20 @@ def __make_save_file_name() -> str:
     return date
 
 
+def frame_modification(amount_of_person: list, frame):
+    for r in amount_of_person:
+        x1, y1, x2, y2 = map(int, r.xyxy[0])
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+    cv2.putText(frame, f"People: {len(amount_of_person)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                (0, 255, 0), 2)
+
+    # Add timestamp at bottom-left
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cv2.putText(frame, timestamp, (10, frame.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0),
+                2, cv2.LINE_AA)
+
+
 def __scan_for_people(model: YOLO, webcam: cv2, queue: Queue, video_queue_order, testing_mode: bool = False, frames_to_consider: int = 6, minimal_confidence: float = 0.7):
     global is_recording
     capture: bool = True
@@ -38,7 +51,6 @@ def __scan_for_people(model: YOLO, webcam: cv2, queue: Queue, video_queue_order,
     people_in_camera: int = 0  # will be passed to know the amount of people the skull see and if he speak to one or multiple people
     # could also be use in the security mode to tell how many people he saw plus sending picture/video
     video_writer: cv2.VideoWriter = None
-
 
     while capture:
         ret, frame = webcam.read()
@@ -77,17 +89,7 @@ def __scan_for_people(model: YOLO, webcam: cv2, queue: Queue, video_queue_order,
                 video_writer = cv2.VideoWriter(f".\\security_camera_video\\{file_name}.mp4", fourcc, fps, (width, height))
                 print(f"Started recording to {file_name}.mp4")
 
-            for r in amount_of_person:
-                x1, y1, x2, y2 = map(int, r.xyxy[0])
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
-            cv2.putText(frame,f"People: {len(amount_of_person)}",(10, 30),cv2.FONT_HERSHEY_SIMPLEX,1,
-                (0, 255, 0),2)
-
-            # Add timestamp at bottom-left
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            cv2.putText(frame,timestamp,(10, frame.shape[0] - 10),cv2.FONT_HERSHEY_SIMPLEX,0.6,(0, 255, 0),
-            2,cv2.LINE_AA)
+            frame_modification(amount_of_person, frame)
 
             video_writer.write(frame)
 
@@ -96,17 +98,14 @@ def __scan_for_people(model: YOLO, webcam: cv2, queue: Queue, video_queue_order,
 
 
 def __testing_visual_webcam(amount_of_person: list, frame):
-    for r in amount_of_person:
-        x1, y1, x2, y2 = map(int, r.xyxy[0])
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
-    cv2.putText(frame, f"People: {len(amount_of_person)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    frame_modification(amount_of_person, frame)
     cv2.imshow("Live Person Detection", frame)
     cv2.waitKey(1)
 
 
 def activate_eyes(queue: Queue, video_queue_order: Queue, testing_mode: bool = False):
-    print(f'is in testing mode : {testing_mode}')
+    if testing_mode:
+        print('Testing mode activated for the "eye" component"')
     webcam, model = __initialise_eyes()
     __scan_for_people(model, webcam, queue, video_queue_order, testing_mode)
 
