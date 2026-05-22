@@ -1,8 +1,11 @@
 import json
+from multiprocessing.connection import answer_challenge
+
 from speak import voice
 from threading import Thread
 from queue import Queue, Empty
 from eyes import activate_eyes
+from mind import request_llm_answer
 
 
 amount_of_people_visible: int = 0
@@ -61,28 +64,57 @@ def load_commands(command_path:str = './order.json'):
         commands.update(json.load(f))
     return commands
 
-
 def run_orders(preloaded_commands: dict, command_receive: str, answer_queue: Queue):
 
-    # We should implement a fuzzy hash for the string to see if something is almost exactly a command that exist.
-    # some testing will be needed to be sur that if we ask what is a light that it does not close the lights
+    text = command_receive.strip()
 
-    for key in preloaded_commands.keys():
-        if str(key).lower().strip() != command_receive.lower().strip():
-            continue
-        answer_queue.put(preloaded_commands[key]['answer'])
-        if str(preloaded_commands[key]['action']).strip().lower() == 'none':
+    for key, value in preloaded_commands.items():
+        key_lower = key.lower()
+        if text.lower().startswith(key_lower):
+            argument = text[len(key):].strip()  # everything after command
+
+            answer_queue.put(value['answer'])
+
+            action = str(value.get('action', 'none')).lower().strip()
+
+            if action != "none":
+                if globals()[action] == deep_research_for_question:
+                    globals()[action](argument, answer_queue)
+                globals()[action]()  # pass argument here
+
             return
-        globals()[str(preloaded_commands[key]['action'])]()  # let's try this. May be better than using a exec.
+
+
+
+def deep_research_for_question(question: str, answer_queue: Queue):
+    """
+    This is a joke its just running the LLM on the followed sentences
+    :return:
+    """
+    data:dict = {
+        "model": "deepseek-r1:8b",  # Replace with your model name (e.g., "deepseek", "llama2", etc.)
+        "prompt": f'{question} Keep it short. This will be read out for someone.',
+        "stream": False  # Set to False to get the entire response at once
+    }
+    request = request_llm_answer(data)
+    answer_queue.put(request)
+    return
 
 
 def initialise_audio_thread(queue: Queue, audio_answer_queue):
     Thread(target=voice, args=(queue, audio_answer_queue), daemon=True).start()
 
 
-def initialise_video_thread(queue: Queue, video_queue_order: Queue):
-    Thread(target=activate_eyes, args=(queue, video_queue_order), daemon=True).start()
-
+def initialise_video_thread(queue: Queue, video_queue_order: Queue, testing_mode: bool = True):
+    Thread(
+        target=activate_eyes,
+        kwargs={
+            "vision_queue": queue,
+            "control_queue": video_queue_order,
+            "testing_mode": testing_mode
+        },
+        daemon=True
+    ).start()
 # endregion
 
 

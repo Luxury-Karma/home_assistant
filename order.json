@@ -10,6 +10,10 @@
   "Stop security": {
     "answer": "Stopping Security Surveillance",
     "action": "stop_video_surveillance"
+  },
+  "Search" : {
+    "answer": "Researching the requested subject in comon database",
+    "action":"deep_research_for_question"
   }
 
 }
